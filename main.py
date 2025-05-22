@@ -35,9 +35,9 @@ os.makedirs(folder_path, exist_ok=True)
 # ================================ MEMORY ===========================================================================================================
 
 GREETINGS = ["здравствуй айро", "айрон", "просыпайся айро", "ты здесь айрон", "пора работать айрон", "привет айро",
-             "арон", "ты здесь", "ойрон", "рон"]
-GREETINGS_RES = ["всегда рядом с вами, сер", "я готов сер",
-                 "ваше желание - мой приказ", "чем могу вам помочь, сер?", "я подключен и готов"]
+             "арон", "ты здесь", "ойрон", "рон","айро", "i", "ir"]
+GREETINGS_RES = ["всегда рядом с вами", "я готов ",
+                 "ваше желание - мой приказ", "чем могу вам помочь?", "я подключен и готов"]
 
 CALENDAR_STRS = ["что у меня есть", "есть ли у меня планы", "я занят"]
 
@@ -45,7 +45,13 @@ CALENDAR_STRS = ["что у меня есть", "есть ли у меня пл�
 # ======================================е=================================================================================================================
 
 def speak(text):
+    # Устанавливаем флаг, что ассистент говорит
+    if hasattr(startExecution, 'is_speaking'):
+        startExecution.is_speaking = True
     obj.tts(text)
+    # Сбрасываем флаг после завершения речи
+    if hasattr(startExecution, 'is_speaking'):
+        startExecution.is_speaking = False
 
 
 app_id = config.wolframalpha_id
@@ -82,7 +88,7 @@ def computational_intelligence(question):
             print("Parsed Answer:", answer_text)
             return answer_text
         else:
-            speak("Извините, сэр, я не смог найти ответ на ваш вопрос.")
+            speak("Извините, я не смог найти ответ на ваш вопрос.")
             return None
     except Exception as e:
         print("Error:", e)
@@ -94,12 +100,7 @@ def startup():
     speak("Инициализация Айрон")
     speak("Запуск всех системных приложений")
     speak("Установка и проверка всех драйверов")
-    speak("Калибровка и проверка всех основных процессоров")
-    speak("Проверка подключения к Интернету")
-    speak("Подождите минутку, сэр")
-    speak("Все драйверы запущены")
     speak("Все системы были активированы")
-    speak("Теперь я в Сети")
     hour = int(datetime.datetime.now().hour)
 
 
@@ -113,7 +114,7 @@ def wish():
         speak("Добрый вечер")
     c_time = obj.tell_time()
     speak(f"В настоящее время {c_time}")
-    speak("Я Айрон. Я на связи, сэр. Пожалуйста, скажите, чем я могу вам помочь")
+    speak("Я Айрон. Я на связи. Пожалуйста, скажите, чем я могу вам помочь")
 
 
 # if __name__ == "__main__":
@@ -121,32 +122,85 @@ def wish():
 class MainThread(QThread):
     def __init__(self):
         super(MainThread, self).__init__()
+        self.active = False
+        self.last_activity_time = 0
+        self.is_speaking = False  # Флаг, указывающий, говорит ли ассистент
+        # Создаем и запускаем поток отслеживания таймаута
+        self.timeout_thread_active = True
+        self.timeout_thread = threading.Thread(target=self.timeout_monitor)
+        self.timeout_thread.daemon = True  # Делаем поток демоном, чтобы он завершился вместе с основной программой
+        self.timeout_thread.start()
+
+    def timeout_monitor(self):
+        last_status_time = 0
+        while self.timeout_thread_active:
+            current_time = time.time()
+
+            # Выводим отладочную информацию каждые 5 секунд
+            if current_time - last_status_time > 5:
+                if self.active:
+                    time_since_last = current_time - self.last_activity_time
+                    status = "говорит" if self.is_speaking else "ожидает"
+                    print(f"Статус: активен, {status}, {time_since_last:.1f} сек. с последней активности")
+                last_status_time = current_time
+
+            # Проверяем, не истек ли таймаут (только если ассистент не говорит)
+            if self.active and not self.is_speaking and current_time - self.last_activity_time > 15:
+                self.active = False
+                print("Таймаут активации истек после 10 секунд бездействия")
+
+
+            # Проверяем каждые 0.5 секунды
+            time.sleep(0.5)
 
     def TaskExecution(self):
+        # Устанавливаем флаг, что мы в процессе стартового приветствия
+        self.is_speaking = True
         startup()
         wish()
+        # Сбрасываем флаг после завершения стартового приветствия
+        self.is_speaking = False
 
     def run(self):
         self.TaskExecution()
 
         def launch_app(path):
             subprocess.Popen(path)
+
         while True:
             try:
+                # Получаем команду
                 command = obj.mic_input()
 
+                # Проверяем активационные фразы
+                if any(greeting in command.lower() for greeting in GREETINGS):
+                    self.active = True
+                    self.last_activity_time = time.time()  # Обновляем время последней активности
+                    print("Система активирована в:", time.strftime("%H:%M:%S", time.localtime(self.last_activity_time)))
+                    speak(random.choice(GREETINGS_RES))
+                    continue
+
+                # Если система не активна, ждем активационную фразу
+                if not self.active:
+                    continue
+
+                # Обновляем время последней активности при каждой команде
+                self.last_activity_time = time.time()
+                print("Активность обновлена в:", time.strftime("%H:%M:%S", time.localtime(self.last_activity_time)))
+
+                # Обработка команд
                 if "привет" in command:  # Приведение к нижнему регистру для точности
                     speak("Привет! Как я могу помочь?")
                 elif "как дела" in command.lower():
                     speak("У меня всё хорошо, спасибо!")
 
                 if "спи" in command or "перейди в спящий режим" in command:
-                    speak("Перехожу в спящий режим, сэр.")
+                    speak("Перехожу в спящий режим.")
                     os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
                     continue
 
-                elif "выключи" in command or "заверши работу" in command:
-                    speak("Выключаю систему. Спасибо за использование, сэр!")
+                elif "выключение" in command or "заверши работу" in command:
+                    speak("Выключаю систему. Спасибо за использование!")
                     os.system("shutdown /s /t 1")
                     continue
 
@@ -158,7 +212,7 @@ class MainThread(QThread):
                 elif "время" in command:
                     time_c = obj.tell_time()
                     print(time_c)
-                    speak(f"Сэр, время пришло. {time_c}")
+                    speak(f" время пришло. {time_c}")
 
                 elif re.search('запусти', command):
                     parts = command.split(' ', 1)
@@ -178,8 +232,7 @@ class MainThread(QThread):
                             print('Приложение не найдено')
                         else:
                             try:
-                                speak('Запуск: ' + app + ' для вас, сэр!')
-                                # Запускаем приложение в отдельном потоке
+                                speak('Запуск: ' + app + ' для вас!')
                                 thread = threading.Thread(target=launch_app, args=(path,))
                                 thread.start()
                             except Exception as e:
@@ -205,13 +258,10 @@ class MainThread(QThread):
                         else:
                             try:
                                 os.system(f'taskkill /im {process_name} /f')
-                                speak('Закрываю: ' + app + ' для вас, сэр!')
+                                speak('Закрываю: ' + app + ' для вас!')
                             except Exception as e:
                                 speak('Произошла ошибка при закрытии приложения.')
                                 print(f'Ошибка: {e}')
-
-                elif command in GREETINGS:
-                    speak(random.choice(GREETINGS_RES))
 
                 if re.search('открой сайт', command):
                     words = command.split(' ')
@@ -220,7 +270,7 @@ class MainThread(QThread):
                         open_result = obj.website_opener(domain)
                         try:
                             if open_result:  # Если сайт успешно открыт
-                                speak(f'Хорошо, сэр!! Открываю {domain}')
+                                speak(f'Хорошо!! Открываю {domain}')
                             else:  # Если сайт не найден
                                 speak("Сайт не найден с указанными доменом.")
                         except Exception as e:
@@ -245,7 +295,6 @@ class MainThread(QThread):
                         topic = ' '.join(words)  # Используем всю команду как тему
                         wiki_res = obj.tell_me(topic)
                         speak(wiki_res)
-                        # Здесь добавьте код для озвучивания
                     else:
                         speak("Вы не назвали тему. Пожалуйста, уточните, о чем вы хотите услышать.")
 
@@ -258,7 +307,7 @@ class MainThread(QThread):
                         speak(articles['title'])
                         if index == len(news_res) - 2:
                             break
-                    speak('Это были главные заголовки: "Хорошего дня, сэр!"..')
+                    speak('Это были главные заголовки: "Хорошего дня!"..')
 
                 elif "включи музыку" in command or "включи какую-нибудь музыку" in command:
                     music_url = "https://music.youtube.com/"
@@ -268,7 +317,7 @@ class MainThread(QThread):
                     words = command.split(' ')
                     if len(words) > 1:  # Проверяем, указано ли видео
                         video = ' '.join(words[1:])  # Объединяем все слова после "youtube"
-                        speak(f"Хорошо, сэр, включаю {video} на youtube")
+                        speak(f"Хорошо, включаю {video} на youtube")
                         pywhatkit.playonyt(video)
                     else:
                         speak("Вы не назвали, какое видео хотите посмотреть.")
@@ -281,9 +330,6 @@ class MainThread(QThread):
                         speak(answer)
                     else:
                         speak("Вы не указали, что нужно вычислить.")
-
-                elif "что у меня есть" in command or "есть ли у меня планы" or "я занят" in command:
-                    obj.google_calendar_events(command)
 
                 if "сделай пометку" in command or "запиши" in command or "запомни" in command:
                     speak("Что бы вы хотели, чтобы я записал?")
@@ -302,8 +348,8 @@ class MainThread(QThread):
                     speak("Открываю заметки")
                     obj.open_notes()
 
-                if "шутка" in command:
-                    joke = pyjokes.get_joke()
+                elif "расскажи шутку" in command:
+                    joke = pyjokes.get_joke(language='ru')
                     print(joke)
                     speak(joke)
 
@@ -311,6 +357,18 @@ class MainThread(QThread):
                     sys_info = obj.system_info()
                     print(sys_info)
                     speak(sys_info)
+                    
+                elif "женский голос" in command:
+                    if obj.change_voice("female"):
+                        speak("Теперь я говорю женским голосом")
+                    else:
+                        speak("Не удалось найти женский голос")
+                        
+                elif "мужской голос" in command:
+                    if obj.change_voice("male"):
+                        speak("Теперь я говорю мужским голосом")
+                    else:
+                        speak("Не удалось найти мужской голос")
 
                 elif "где находится" in command:
                     if "где находится " not in command:
@@ -334,7 +392,7 @@ class MainThread(QThread):
                                 print(res)
                                 speak(res)
                         except:
-                            res = "Извините, сэр, я не смог получить координаты того места, которое вы запрашивали. Пожалуйста, попробуйте снова."
+                            res = "Извините, я не смог получить координаты того места, которое вы запрашивали. Пожалуйста, попробуйте снова."
                             speak(res)
 
                 elif "ip адрес" in command:
@@ -343,7 +401,7 @@ class MainThread(QThread):
                     speak(f"Ваш ip адрес - это {ip}")
 
                 elif "переключи окно" in command or "окно переключения" in command:
-                    speak("Хорошо, сэр, открываю окно.")
+                    speak("Хорошо, открываю окно.")
                     pyautogui.keyDown("alt")
                     pyautogui.press("tab")
                     time.sleep(1)
@@ -357,12 +415,12 @@ class MainThread(QThread):
                             f"В данный момент вы находитесь в {city} город, который находится в {state} государство и страна {country}")
                     except Exception as e:
                         speak(
-                            "Извините, сэр, я не смог узнать ваше текущее местоположение. Пожалуйста, попробуйте снова")
+                            "Извините, я не смог узнать ваше текущее местоположение. Пожалуйста, попробуйте снова")
 
                 elif "сделай снимок экрана" in command or "снимок экрана" in command or "захват экрана" in command:
                     speak("Под каким именем вы хотите сохранить скриншот?")
                     name = obj.mic_input()
-                    speak("Хорошо, сэр, делаю снимок экрана.")
+                    speak("Хорошо, делаю снимок экрана.")
                     img = pyautogui.screenshot()
                     file_path = os.path.join(folder_path, f"{name}.png")
                     img.save(file_path)
@@ -372,13 +430,13 @@ class MainThread(QThread):
                     try:
                         img = Image.open(file_path)
                         img.show()
-                        speak("Вот оно, сэр.")
+                        speak("Вот оно")
                         time.sleep(2)
                     except IOError:
-                        speak("Извините, сэр, я не могу отобразить скриншот")
+                        speak("Извините, я не могу отобразить скриншот")
 
-                if "до свидания" in command or "не в сети" in command or "пока" in command:
-                    speak("Хорошо, сэр, перехожу в автономный режим. Было приятно с вами поработать")
+                if command.strip() in ["до свидания", "пока"]:
+                    speak("Хорошо, перехожу в автономный режим. Было приятно с вами поработать")
                     sys.exit()
 
             except Exception as e:
@@ -400,27 +458,36 @@ class Main(QMainWindow):
     def __del__(self):
         sys.stdout = sys.__stdout__
 
-    # def run(self):
-    #     self.TaskExection
     def startTask(self):
-        self.ui.movie = QtGui.QMovie("Iron/utils/images/live_wallpaper.gif")
-        self.ui.label.setMovie(self.ui.movie)
-        self.ui.movie.start()
-        timer = QTimer(self)
-        timer.timeout.connect(self.showTime)
-        timer.start(1000)
-        startExecution.start()
+        possible_paths = []
+        if getattr(sys, 'frozen', False):
+            application_path = os.path.dirname(sys.executable)
+            possible_paths.append(os.path.join(application_path, "live_wallpaper.gif"))
+            possible_paths.append(os.path.join(application_path, "Iron", "utils", "images", "live_wallpaper.gif"))
+        possible_paths.append("Iron/utils/images/live_wallpaper.gif")
+        possible_paths.append("live_wallpaper.gif")
 
-    def showTime(self):
-        current_time = QTime.currentTime()
-        current_date = QDate.currentDate()
-        label_time = current_time.toString('hh:mm:ss')
-        label_date = current_date.toString(Qt.ISODate)
-        self.ui.textBrowser.setText(label_date)
-        self.ui.textBrowser_2.setText(label_time)
+        gif_found = False
+        for path in possible_paths:
+            if os.path.exists(path):
+                self.ui.movie = QtGui.QMovie(path)
+                self.ui.label.setMovie(self.ui.movie)
+                self.ui.movie.start()
+                print(f"GIF found at: {path}")
+                gif_found = True
+                break
+
+        if not gif_found:
+            print(f"GIF not found in any of these locations: {possible_paths}")
+
+        # Hide date and time displays
+        self.ui.textBrowser.hide()
+        self.ui.textBrowser_2.hide()
+
+        startExecution.start()
 
 
 app = QApplication(sys.argv)
 jarvis = Main()
 jarvis.show()
-exit(app.exec_())
+sys.exit(app.exec_())
