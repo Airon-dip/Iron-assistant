@@ -11,27 +11,31 @@ Google Calendar API
 **Установка**
 
 Сначала клонируйте репозиторий.
-`git clone <ваш_репозиторий>`
+```git clone <ваш_репозиторий>```
 
 Создайте файл config.py и включите в него следующее:
 python
-`
+
+```
 email = "ваш_email"
 email_password = "<<ваш_пароль_от_email>"
 wolframalpha_id = "<ваш_wolframalpha_id>"
 weather_api_key = "<ваш_weather_id>"
 Скопируйте файл config.py в папку Iron/config.
 pip install -r requirements.txt
-`
+```
 Установите PyAudio из файла wheel, следуя инструкциям, приведенным здесь.
 Запустите программу с помощью:
 
-`python main.py`
+```
+|python main.py
+```
 
 Приятного использования!
 
 **Структура кода**
-`
+
+```
 ├── driver
 ├── Iron # Основная папка с функциями
 │ ├── config # Содержит все секретные ключи API
@@ -41,7 +45,7 @@ pip install -r requirements.txt
 ├── gui.ui # Файл GUI (в формате .ui)
 ├── main.py # Главная программа
 ├── requirements.txt # Все зависимости программы
-`
+```
 Структура кода довольно проста. Код полностью модульный и легко настраиваемый.
 
 **Как добавить новую функцию:**
