@@ -21,10 +21,11 @@ email = "ваш_email"
 email_password = "<<ваш_пароль_от_email>"
 wolframalpha_id = "<ваш_wolframalpha_id>"
 weather_api_key = "<ваш_weather_id>"
+```
 Скопируйте файл config.py в папку Iron/config.
+```
 pip install -r requirements.txt
 ```
-Установите PyAudio из файла wheel, следуя инструкциям, приведенным здесь.
 Запустите программу с помощью:
 
 ```
