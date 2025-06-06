@@ -31,7 +31,7 @@ pip install -r requirements.txt
 Запустите программу с помощью:
 
 ```
-|python main.py
+python main.py
 ```
 
 Приятного использования!
