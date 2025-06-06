@@ -5,9 +5,9 @@
 Для запуска этой программы вам потребуется несколько ключей API. Зарегистрируйте свой ключ API, перейдя по следующим ссылкам:
 
 ```
-OpenWeatherMap API https://home.openweathermap.org/
-Wolframalpha https://www.wolframalpha.com/
-Google Calendar API https://developers.google.com/
+[OpenWeatherMap API](https://home.openweathermap.org/)
+[Wolframalpha API ](https://www.wolframalpha.com/)
+[Google Calendar API](https://developers.google.com/)
 ```
 
 **Установка**
